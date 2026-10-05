@@ -11,7 +11,7 @@ const customerSchema = new mongoose.Schema(
       validate: {
         validator: (value) => /^[A-Za-z\s]+$/.test(value),
         message: "Name can only contain letters and spaces.",
-      },
+            },
     },
     email: {
       type: String,

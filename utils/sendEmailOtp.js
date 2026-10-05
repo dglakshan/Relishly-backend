@@ -26,5 +26,7 @@ export const otpVerificationEamil = ({ otp, email }) => {
     html: htmlContent,
   };
 
-  transporter.sendMail(mailOptions);
+  const send = transporter.sendMail(mailOptions);
+
+  return send;
 };

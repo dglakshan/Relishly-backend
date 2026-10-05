@@ -19,11 +19,11 @@ app.use(cors(crosOptions)); // Place CORS before body parsers
 app.use(express.json());
 
 // 3. API Routes
-app.use("/api/customer", adminRouter);
+app.use("/api/admin", adminRouter);
 app.use("/api/customer", customerRouter);
 
 // 4. Server Listener
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

@@ -1,23 +1,28 @@
 import express from "express";
 import {
+  register,
+  login,
+  verifyOtpHandler,
   addTable,
   bookTableByAdmin,
   removeBookedTable,
-  verifyOtp,
   getAllTables,
 } from "../controllers/adminController.js";
+import { loginMiddleware } from "../middlewares/loginMiddleware.js";
 
 const adminRouter = express.Router();
 
-// Admin Authentication / OTP Verification
-router.post("/verify-otp", verifyOtp);
+// 1. Authentication & Registration Routes
+adminRouter.post("/register", register);
+adminRouter.post("/login", login);
+adminRouter.post("/verify-otp", verifyOtpHandler);
 
-// Table Management Routes
-router.post("/add-table", addTable);
-router.get("/tables", getAllTables);
+// 2. Table Management Routes
+adminRouter.post("/add-table", loginMiddleware, addTable);
+adminRouter.get("/tables", loginMiddleware, getAllTables);
 
-// Admin Booking & Unbooking Overrides
-router.post("/book-table", bookTableByAdmin);
-router.post("/remove-table", removeBookedTable);
+// 3. Admin Direct Booking & Unbooking Overrides
+adminRouter.post("/book-table", loginMiddleware, bookTableByAdmin);
+adminRouter.post("/remove-table", loginMiddleware, removeBookedTable);
 
 export default adminRouter;

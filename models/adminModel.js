@@ -3,7 +3,7 @@ import Table from "./tableModel.js";
 
 const adminSchema = new mongoose.Schema(
   {
-    name: {
+    fullname: {
       type: String,
       required: true,
       minLength: 3,
@@ -28,6 +28,10 @@ const adminSchema = new mongoose.Schema(
         validator: (value) => /^[0-9]{10}$/.test(value),
         message: "Mobile number must be exactly 10 digits.",
       },
+    },
+    password: {
+      type: String,
+      required: true,
     },
     otp: { type: String },
     otpExpiresAt: { type: Date },
