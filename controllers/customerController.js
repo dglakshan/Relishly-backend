@@ -5,7 +5,7 @@ import { ROLES, STATUS_CODES } from "../utils/constants.js";
 import bcrypt from "bcrypt";
 import verifyOtp from "../utils/verifyOtp.js";
 import createOtp from "../utils/createOtp.js";
-import { otpVerificationEamil } from "../utils/sendEmailOTP.js";
+import { otpVerificationEamil } from "../utils/sendEmailOtp.js";
 
 // 1. Create a New Table Booking & Send OTP
 export const bookTable = async (req, res) => {
