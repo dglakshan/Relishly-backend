@@ -5,7 +5,7 @@ import { STATUS_CODES, ROLES } from "../utils/constants.js";
 import bcrypt from "bcrypt";
 import { createToken } from "../utils/createToken.js";
 import OTP from "../utils/createOtp.js";
-import { otpVerificationEamil } from "../utils/sendEmailOTP.js";
+import { otpVerificationEamil } from "../utils/sendEmailOtp.js";
 import verifyOtp from "../utils/verifyOtp.js";
 
 // 1. Admin Registration (Sends OTP to Email)
