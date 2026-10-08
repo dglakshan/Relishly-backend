@@ -1,5 +1,5 @@
 export const crosOptions = {
-  origin: "http://localhost:5173",
+  origin: "https://relishly-5uzygdbxt-dglakshans-projects.vercel.app/",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
