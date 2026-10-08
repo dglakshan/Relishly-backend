@@ -10,10 +10,24 @@ import verifyOtp from "../utils/verifyOtp.js";
 
 // 1. Admin Registration (Sends OTP to Email)
 export const register = async (req, res) => {
-  console.log(req.body);
+  // const { authEmail, role } = req.user;
   const { fullname, email, mobile, password } = req.body;
 
   console.log(req.body);
+
+  // const owner = await Admin.findOne({ email: authEmail });
+
+  // if (owner)
+  //   return res.status(STATUS_CODES.NOT_FOUND).json({
+  //     success: false,
+  //     message: "The owner could not find",
+  //   });
+
+  // if (owner.role != ROLES.SUPER_ADMIN)
+  //   return res.status(STATUS_CODES.FORBIDDEN).json({
+  //     success: false,
+  //     message: "You are not eligible to get this acction",
+  //   });
 
   if (!fullname || !email || !mobile || !password) {
     return res
@@ -29,15 +43,16 @@ export const register = async (req, res) => {
         .json({ success: false, message: "Admin email already registered." });
     }
 
-    const otp = OTP();
+    const otp = await OTP();
+
     await otpVerificationEamil({ otp, email });
 
     // Hash password and OTP
     const passwordHash = await bcrypt.hash(password, 12);
-    const otpHash = await bcrypt.hash(otp, 10);
+    const otpHash = await bcrypt.hash(otp, 12);
 
     const newAdmin = await Admin.create({
-      name: fullname,
+      fullname: fullname,
       email,
       password: passwordHash,
       otp: otpHash,
@@ -51,9 +66,10 @@ export const register = async (req, res) => {
       adminId: newAdmin._id,
     });
   } catch (err) {
+    console.log(err);
     return res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
-      message: "Failed to send OTP",
+      message: "Server error",
       error: err.message,
     });
   }
@@ -62,6 +78,8 @@ export const register = async (req, res) => {
 // 2. Admin Login
 export const login = async (req, res) => {
   const { email, password } = req.body;
+
+  console.log(req.body);
 
   if (!email || !password) {
     return res
@@ -75,7 +93,7 @@ export const login = async (req, res) => {
     if (!admin) {
       return res
         .status(STATUS_CODES.UNAUTHORIZED)
-        .json({ success: false, message: "Invalid email or password." });
+        .json({ success: false, message: "Invalid email" });
     }
 
     const comparePassword = await bcrypt.compare(password, admin.password);
@@ -83,7 +101,7 @@ export const login = async (req, res) => {
     if (!comparePassword) {
       return res
         .status(STATUS_CODES.UNAUTHORIZED)
-        .json({ success: false, message: "Invalid email or password." });
+        .json({ success: false, message: "Invalid password." });
     }
 
     // Generate token passing payload details
@@ -215,16 +233,10 @@ export const addTable = async (req, res) => {
     const tableNumbers = tableList.map((t) => t.tableNumber);
 
     for (const item of tableList) {
-      if (
-        !item.tableNumber ||
-        !item.size ||
-        !item.availableChairs ||
-        !item.tableType
-      ) {
+      if (!item.tableNumber || !item.availableChairs || !item.tableType) {
         return res.status(STATUS_CODES.BAD_REQUEST).json({
           success: false,
-          message:
-            "All fields (tableNumber, size, availableChairs, tableType) are required for every table.",
+          message: "All fields are required for every table.",
         });
       }
     }

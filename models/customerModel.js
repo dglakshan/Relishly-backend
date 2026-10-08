@@ -11,7 +11,7 @@ const customerSchema = new mongoose.Schema(
       validate: {
         validator: (value) => /^[A-Za-z\s]+$/.test(value),
         message: "Name can only contain letters and spaces.",
-            },
+      },
     },
     email: {
       type: String,
@@ -66,13 +66,16 @@ customerSchema.index({ otpExpiresAt: 1 }, { expireAfterSeconds: 0 });
 // Compound text index for search
 customerSchema.index({ name: "text", email: "text", mobile: "text" });
 
-// Cascade release tables on deletion
 customerSchema.pre("findOneAndDelete", async function () {
   const customer = await this.model.findOne(this.getQuery());
-  if (customer && customer.bookedTables.length > 0) {
-    await Table.updateMany(
-      { _id: { $in: customer.bookedTables } },
-      { bookingStatus: "available", bookingDetails: null, bookedByModel: null },
+  if (customer) {
+    await mongoose.model("Table").updateMany(
+      { bookingDetails: customer._id },
+      {
+        bookingStatus: "available",
+        bookingDetails: null,
+        bookedByModel: null,
+      },
     );
   }
 });

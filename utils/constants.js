@@ -8,6 +8,7 @@ export const STATUS_CODES = {
 };
 
 export const ROLES = {
+  SUPER_ADMIN: "super_admin",
   ADMIN: "admin",
   CUSTOMER: "customer",
 };

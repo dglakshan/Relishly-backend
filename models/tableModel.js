@@ -11,8 +11,8 @@ const tableSchema = new mongoose.Schema(
         message: "Table number must be between 1 and 500.",
       },
     },
-    size: { type: Number, required: true },
-    availableChairs: { type: Number, required: true },
+
+    availableChairs: { type: Number },
     tableType: { type: String, enum: ["indoor", "outdoor"], required: true },
     bookingStatus: {
       type: String,

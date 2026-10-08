@@ -6,6 +6,7 @@ import cors from "cors";
 import customerRouter from "./routes/customerRouter.js";
 import { crosOptions } from "./config/crosOptions.js";
 import adminRouter from "./routes/adminRouter.js";
+import tableRouter from "./routes/tableRouter.js";
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use(express.json());
 // 3. API Routes
 app.use("/api/admin", adminRouter);
 app.use("/api/customer", customerRouter);
+app.use("/api", tableRouter);
 
 // 4. Server Listener
 const PORT = process.env.PORT;

@@ -1,5 +1,7 @@
 export const OTP = () => {
-  const otp = Math.floor(100000 + Math.random() * 900000);
+  let otp = Math.floor(100000 + Math.random() * 900000);
+  otp = otp.toString();
+
   return otp;
 };
 
