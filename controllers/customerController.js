@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import verifyOtp from "../utils/verifyOtp.js";
 import createOtp from "../utils/createOtp.js";
 import { otpVerificationEamil } from "../utils/sendEmailOtp.js";
+import e from "cors";
 
 // 1. Create a New Table Booking & Send OTP
 export const bookTable = async (req, res) => {
@@ -55,35 +56,46 @@ export const bookTable = async (req, res) => {
 
     const tableIds = existingTables.map((t) => t._id);
 
-    // 3. Generate OTP & Hash
+    // 3. Generate & Hash OTP
     const otp = createOtp();
-    const otpString = String(otp);
-    const otpHash = await bcrypt.hash(otpString, 10);
+    const otpHash = await bcrypt.hash(otp, 10);
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Send Email OTP
+    // Send Verification Email
     await otpVerificationEamil({ otp: otpString, email });
 
-    // 4. Save/Update Customer Info without booking tables yet
-    let customer = await Customer.findOne({ email });
+    // 4. Email එක සහ සියලුම details සමානම Document එකක් තිබේදැයි පරීක්ෂා කිරීම
+    const exactMatchingCustomer = await Customer.findOne({
+      email,
+      name,
+      mobile,
+      date,
+      time,
+      duration,
+      people,
+      message,
+    });
 
-    if (customer) {
-      customer.name = name;
-      customer.mobile = mobile;
-      customer.date = date;
-      customer.time = time;
-      customer.duration = duration;
-      customer.people = people;
-      customer.message = message;
-      customer.otp = otpHash;
-      customer.otpExpiresAt = otpExpiresAt;
-      customer.bookingStatus = "pending";
-      customer.isVerified = false;
-      customer.pendingTableIds = tableIds; // OTP හරියන තෙක් තාවකාලිකව තබා ගනී
+    if (exactMatchingCustomer) {
+      // 🔄 Email සහ අනෙක් සියලුම Fields සමාන නම් පමණක් පැරණි Record එක Update කරයි
+      const currentBookedIds = exactMatchingCustomer.bookedTables.map((id) =>
+        id.toString(),
+      );
 
-      await customer.save();
+      const newTableIds = tableIds.filter(
+        (id) => !currentBookedIds.includes(id.toString()),
+      );
+
+      exactMatchingCustomer.pendingTableIds = newTableIds;
+      exactMatchingCustomer.otp = otpHash;
+      exactMatchingCustomer.otpExpiresAt = otpExpiresAt;
+      exactMatchingCustomer.bookingStatus = "pending";
+      exactMatchingCustomer.isVerified = false;
+
+      await exactMatchingCustomer.save();
     } else {
-      customer = await Customer.create({
+      // 🆕 Email එක සමාන වුවත් වෙනත් ඕනෑම Field එකක් වෙනස් නම් (හෝ අලුත්ම Customer නම්) -> අලුත් Document එකක් සාදයි
+      await Customer.create({
         name,
         email,
         mobile,
@@ -91,7 +103,7 @@ export const bookTable = async (req, res) => {
         time,
         duration,
         people,
-        pendingTableIds: tableIds, // Pending table requests
+        pendingTableIds: tableIds,
         bookedTables: [],
         message,
         otp: otpHash,
@@ -142,19 +154,17 @@ export const confirmBooking = async (req, res) => {
         .json({ message: "Invalid OTP code." });
     }
 
-    // 3. OTP Success -> Add Pending Tables to Customer's Booked Tables
-    const pendingTables = customer.pendingTableIds || [];
-    const currentBookedTableIds = customer.bookedTables.map((id) =>
-      id.toString(),
-    );
-
-    // Duplicate නොවෙන පරිදි අලුත් Table IDs පමණක් එකතු කිරීම
-    const newTableIds = pendingTables.filter(
-      (id) => !currentBookedTableIds.includes(id.toString()),
-    );
-
-    if (newTableIds.length > 0) {
+    if (customer.bookedTables.length > 0) {
+      const newTableIds = customer.pendingTableIds;
       customer.bookedTables.push(...newTableIds);
+      await Table.updateMany(
+        { _id: { $in: newTableIds } },
+        {
+          bookingStatus: "booked",
+          bookingDetails: customer._id,
+          bookedByModel: "Customer",
+        },
+      );
     }
 
     // Customer Status Update
@@ -167,7 +177,7 @@ export const confirmBooking = async (req, res) => {
 
     // 4. Update Tables status in Database to "booked"
     await Table.updateMany(
-      { _id: { $in: pendingTables } },
+      { _id: { $in: customer.bookedTables } },
       {
         bookingStatus: "booked",
         bookingDetails: customer._id,
