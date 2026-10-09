@@ -6,10 +6,16 @@ dotenv.config();
 export const otpVerificationEamil = async ({ otp, email }) => {
   try {
     const transporter = nodemailer.createTransport({
-      service: "gmail", // Fixed typo (was "gamil")
+      host: "smtp.gmail.com",
+      port: 587, // Use port 587 instead of 465
+      secure: false, // false for 587 (uses STARTTLS)
       auth: {
-        user: process.env.EMAIL_USER, // Matches your .env key
-        pass: process.env.EMAIL_APP_PASSWORD, // Matches your .env key
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      family: 4,
+      tls: {
+        rejectUnauthorized: false,
       },
     });
 

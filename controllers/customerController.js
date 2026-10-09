@@ -188,6 +188,7 @@ export const confirmBooking = async (req, res) => {
       message: "Booking confirmed successfully!",
     });
   } catch (error) {
+    consile.log(error);
     return res.status(STATUS_CODES.SERVER_ERROR).json({
       message: "Failed to confirm booking",
       error: error.message,
@@ -314,6 +315,8 @@ export const removeTableBooking = async (req, res) => {
       success: true,
     });
   } catch (error) {
+    console.log(error);
+
     return res.status(STATUS_CODES.SERVER_ERROR).json({
       message: "Failed to send OTP email",
       error: error.message,
