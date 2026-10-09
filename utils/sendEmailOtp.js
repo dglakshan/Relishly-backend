@@ -1,14 +1,13 @@
-import Brevo from "@getbrevo/brevo";
+import { TransactionalEmailsApi, SendSmtpEmail } from "@getbrevo/brevo";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Initialize Brevo API Instance
-const apiInstance = new Brevo.TransactionalEmailsApi();
-apiInstance.setApiKey(
-  Brevo.TransactionalEmailsApiApiKeys.apiKey,
-  process.env.BREVO_API_KEY,
-);
+// Direct ES Module Class Initialization
+const apiInstance = new TransactionalEmailsApi();
+
+// Set API Key
+apiInstance.setApiKey(0, process.env.BREVO_API_KEY);
 
 export const otpVerificationEamil = async ({ otp, email }) => {
   try {
@@ -51,13 +50,12 @@ export const otpVerificationEamil = async ({ otp, email }) => {
       </div>
     `;
 
-    // Construct Brevo Email Payload
-    const sendSmtpEmail = new Brevo.SendSmtpEmail();
+    const sendSmtpEmail = new SendSmtpEmail();
     sendSmtpEmail.subject = "Relishly - Your Verification OTP";
     sendSmtpEmail.htmlContent = htmlContent;
     sendSmtpEmail.sender = {
       name: "Relishly Restaurant",
-      email: process.env.EMAIL_USER, // Brevo account එක සාදන විට භාවිතා කළ Email එක
+      email: process.env.EMAIL_USER,
     };
     sendSmtpEmail.to = [{ email }];
 
