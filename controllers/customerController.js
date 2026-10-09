@@ -21,7 +21,7 @@ export const bookTable = async (req, res) => {
     message,
   } = req.body;
 
-  // Validation
+  // 1. Validation
   if (
     !name ||
     !email ||
@@ -39,7 +39,7 @@ export const bookTable = async (req, res) => {
   }
 
   try {
-    // Check if requested tables exist and are available
+    // 2. Check table availability
     const existingTables = await Table.find({
       tableNumber: { $in: tableNumbers },
       bookingStatus: "available",
@@ -55,40 +55,51 @@ export const bookTable = async (req, res) => {
 
     const tableIds = existingTables.map((t) => t._id);
 
-    // Generate & Hash OTP
+    // 3. Generate OTP & Hash
     const otp = createOtp();
-    await otpVerificationEamil({ otp, email });
-    const otpHash = await bcrypt.hash(otp, 10);
-
-    // Set OTP Expiry to 10 minutes from now
+    const otpString = String(otp);
+    const otpHash = await bcrypt.hash(otpString, 10);
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Create Customer Document
-    const newCustomer = await Customer.create({
-      name,
-      email,
-      mobile,
-      date,
-      time,
-      duration,
-      people,
-      bookedTables: tableIds,
-      message,
-      otp: otpHash,
-      otpExpiresAt,
-      bookingStatus: "pending",
-      isVerified: false,
-    });
+    // Send Email OTP
+    await otpVerificationEamil({ otp: otpString, email });
 
-    // Update Tables to "booked" and assign Customer reference
-    await Table.updateMany(
-      { _id: { $in: tableIds } },
-      {
-        bookingStatus: "booked",
-        bookingDetails: newCustomer._id,
-        bookedByModel: "Customer",
-      },
-    );
+    // 4. Save/Update Customer Info without booking tables yet
+    let customer = await Customer.findOne({ email });
+
+    if (customer) {
+      customer.name = name;
+      customer.mobile = mobile;
+      customer.date = date;
+      customer.time = time;
+      customer.duration = duration;
+      customer.people = people;
+      customer.message = message;
+      customer.otp = otpHash;
+      customer.otpExpiresAt = otpExpiresAt;
+      customer.bookingStatus = "pending";
+      customer.isVerified = false;
+      customer.pendingTableIds = tableIds; // OTP හරියන තෙක් තාවකාලිකව තබා ගනී
+
+      await customer.save();
+    } else {
+      customer = await Customer.create({
+        name,
+        email,
+        mobile,
+        date,
+        time,
+        duration,
+        people,
+        pendingTableIds: tableIds, // Pending table requests
+        bookedTables: [],
+        message,
+        otp: otpHash,
+        otpExpiresAt,
+        bookingStatus: "pending",
+        isVerified: false,
+      });
+    }
 
     return res.status(STATUS_CODES.SUCCESS).json({
       message:
@@ -97,7 +108,7 @@ export const bookTable = async (req, res) => {
     });
   } catch (error) {
     return res.status(STATUS_CODES.SERVER_ERROR).json({
-      message: "Failed to process booking",
+      message: "Failed to process booking request",
       error: error.message,
     });
   }
@@ -107,47 +118,72 @@ export const bookTable = async (req, res) => {
 export const confirmBooking = async (req, res) => {
   const { email, enterdOtp } = req.body;
 
-  if (!email || !enterdOtp) {
-    return res
-      .status(STATUS_CODES.BAD_REQUEST)
-      .json({ message: "Email and OTP are required" });
-  }
-
   try {
-    const isMatch = await verifyOtp({
-      otp: enterdOtp,
-      email,
-      role: ROLES.CUSTOMER,
-    });
-
-    if (!isMatch) {
-      return res
-        .status(STATUS_CODES.BAD_REQUEST)
-        .json({ message: "Invalid or expired OTP" });
-    }
-
     const customer = await Customer.findOne({ email });
+
     if (!customer) {
       return res
         .status(STATUS_CODES.NOT_FOUND)
-        .json({ message: "Booking record not found" });
+        .json({ message: "Booking request not found." });
     }
 
-    // Confirm booking & clear OTP
-    customer.bookingStatus = "confirmed";
+    // 1. Check OTP Expiry
+    if (new Date() > customer.otpExpiresAt) {
+      return res
+        .status(STATUS_CODES.BAD_REQUEST)
+        .json({ message: "OTP has expired. Please try booking again." });
+    }
+
+    // 2. Verify OTP Hash
+    const isOtpValid = await bcrypt.compare(String(enterdOtp), customer.otp);
+    if (!isOtpValid) {
+      return res
+        .status(STATUS_CODES.BAD_REQUEST)
+        .json({ message: "Invalid OTP code." });
+    }
+
+    // 3. OTP Success -> Add Pending Tables to Customer's Booked Tables
+    const pendingTables = customer.pendingTableIds || [];
+    const currentBookedTableIds = customer.bookedTables.map((id) =>
+      id.toString(),
+    );
+
+    // Duplicate නොවෙන පරිදි අලුත් Table IDs පමණක් එකතු කිරීම
+    const newTableIds = pendingTables.filter(
+      (id) => !currentBookedTableIds.includes(id.toString()),
+    );
+
+    if (newTableIds.length > 0) {
+      customer.bookedTables.push(...newTableIds);
+    }
+
+    // Customer Status Update
     customer.isVerified = true;
-    customer.otp = undefined;
-    customer.otpExpiresAt = undefined;
+    customer.bookingStatus = "confirmed";
+    customer.otp = null;
+    customer.pendingTableIds = []; // Clear pending list
+
     await customer.save();
 
+    // 4. Update Tables status in Database to "booked"
+    await Table.updateMany(
+      { _id: { $in: pendingTables } },
+      {
+        bookingStatus: "booked",
+        bookingDetails: customer._id,
+        bookedByModel: "Customer",
+      },
+    );
+
     return res.status(STATUS_CODES.SUCCESS).json({
-      message: "Booking confirmed successfully!",
       success: true,
+      message: "Booking confirmed successfully!",
     });
   } catch (error) {
-    return res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: error.message });
+    return res.status(STATUS_CODES.SERVER_ERROR).json({
+      message: "Failed to confirm booking",
+      error: error.message,
+    });
   }
 };
 

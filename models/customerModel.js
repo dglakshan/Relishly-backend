@@ -49,6 +49,22 @@ const customerSchema = new mongoose.Schema(
       enum: ["pending", "confirmed", "cancelled"],
       default: "pending",
     },
+    bookingAttemps: {
+      type: Number,
+      default: 0,
+      validate: {
+        validator: function (value) {
+          return value >= 0 && value <= 5;
+        },
+        message: "Booking attempts must be a number between 0 and 5.",
+      },
+    },
+    pendingTableIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Table",
+      },
+    ],
     message: { type: String },
     otp: { type: String },
     otpExpiresAt: { type: Date },
