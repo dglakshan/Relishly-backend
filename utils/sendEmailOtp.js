@@ -1,9 +1,17 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Create transporter outside the function for better performance
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, // Google App Password (16-digit code)
+  },
+  family: 4, // Force IPv4 connection on Render
+});
 
 export const otpVerificationEamil = async ({ otp, email }) => {
   try {
@@ -46,15 +54,16 @@ export const otpVerificationEamil = async ({ otp, email }) => {
       </div>
     `;
 
-    const data = await resend.emails.send({
-      from: "Relishly <onboarding@resend.dev>", // Default free testing sender
-      to: [email],
+    const mailOptions = {
+      from: `Relishly Restaurant <${process.env.EMAIL_USER}>`,
+      to: email,
       subject: "Relishly - Your Verification OTP",
       html: htmlContent,
-    });
+    };
 
-    console.log("Email sent successfully via Resend:", data);
-    return data;
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email sent successfully: ", info.response);
+    return info;
   } catch (error) {
     console.error("Failed to send OTP email:", error.message);
     throw error;
