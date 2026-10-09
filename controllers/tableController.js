@@ -6,7 +6,6 @@ export const fetchAvilableTables = async (req, res) => {
     const avilableTables = await Table.find({
       bookingStatus: "available",
     }).select("tableNumber availableChairs tableType");
-    console.log(avilableTables);
 
     res
       .status(STATUS_CODES.SUCCESS)

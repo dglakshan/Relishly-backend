@@ -62,7 +62,7 @@ export const bookTable = async (req, res) => {
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     // Send Verification Email
-    await otpVerificationEamil({ otp: otpString, email });
+    await otpVerificationEamil({ otp, email });
 
     const exactMatchingCustomer = await Customer.findOne({
       email,
@@ -116,6 +116,7 @@ export const bookTable = async (req, res) => {
       success: true,
     });
   } catch (error) {
+    console.log(error);
     return res.status(STATUS_CODES.SERVER_ERROR).json({
       message: "Failed to process booking request",
       error: error.message,
