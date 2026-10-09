@@ -1,17 +1,14 @@
-import nodemailer from "nodemailer";
+import * as Brevo from "@getbrevo/brevo";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Create transporter outside the function for better performance
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD, // Google App Password (16-digit code)
-  },
-  family: 4, // Force IPv4 connection on Render
-});
+// Initialize Brevo API Instance
+const apiInstance = new Brevo.TransactionalEmailsApi();
+apiInstance.setApiKey(
+  Brevo.TransactionalEmailsApiApiKeys.apiKey,
+  process.env.BREVO_API_KEY,
+);
 
 export const otpVerificationEamil = async ({ otp, email }) => {
   try {
@@ -54,18 +51,21 @@ export const otpVerificationEamil = async ({ otp, email }) => {
       </div>
     `;
 
-    const mailOptions = {
-      from: `Relishly Restaurant <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "Relishly - Your Verification OTP",
-      html: htmlContent,
+    // Construct Brevo Email Payload
+    const sendSmtpEmail = new Brevo.SendSmtpEmail();
+    sendSmtpEmail.subject = "Relishly - Your Verification OTP";
+    sendSmtpEmail.htmlContent = htmlContent;
+    sendSmtpEmail.sender = {
+      name: "Relishly Restaurant",
+      email: process.env.EMAIL_USER, // Brevo account එක සාදන විට භාවිතා කළ Email එක
     };
+    sendSmtpEmail.to = [{ email }];
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully: ", info.response);
-    return info;
+    const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log("Email sent successfully via Brevo API:", data);
+    return data;
   } catch (error) {
-    console.error("Failed to send OTP email:", error.message);
+    console.error("Failed to send OTP email via Brevo:", error.message);
     throw error;
   }
 };
