@@ -8,7 +8,7 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Google App Password (16-digit code)
+    pass: process.env.EMAIL_APP_PASSWORD, // Google App Password (16-digit code)
   },
   family: 4, // Force IPv4 connection on Render
 });
