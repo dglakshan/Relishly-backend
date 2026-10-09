@@ -64,7 +64,6 @@ export const bookTable = async (req, res) => {
     // Send Verification Email
     await otpVerificationEamil({ otp: otpString, email });
 
-    // 4. Email එක සහ සියලුම details සමානම Document එකක් තිබේදැයි පරීක්ෂා කිරීම
     const exactMatchingCustomer = await Customer.findOne({
       email,
       name,
@@ -77,7 +76,6 @@ export const bookTable = async (req, res) => {
     });
 
     if (exactMatchingCustomer) {
-      // 🔄 Email සහ අනෙක් සියලුම Fields සමාන නම් පමණක් පැරණි Record එක Update කරයි
       const currentBookedIds = exactMatchingCustomer.bookedTables.map((id) =>
         id.toString(),
       );
@@ -94,7 +92,6 @@ export const bookTable = async (req, res) => {
 
       await exactMatchingCustomer.save();
     } else {
-      // 🆕 Email එක සමාන වුවත් වෙනත් ඕනෑම Field එකක් වෙනස් නම් (හෝ අලුත්ම Customer නම්) -> අලුත් Document එකක් සාදයි
       await Customer.create({
         name,
         email,
